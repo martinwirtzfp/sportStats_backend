@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "competition")
+@Table(name = "competition", uniqueConstraints = @UniqueConstraint(columnNames = {"api_id", "season"}))
 public class CompetitionEntity {
 
     @Id
@@ -15,7 +15,7 @@ public class CompetitionEntity {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(name = "api_id", unique = true)
+    @Column(name = "api_id")
     private Integer apiId;
 
     @Column(length = 30)

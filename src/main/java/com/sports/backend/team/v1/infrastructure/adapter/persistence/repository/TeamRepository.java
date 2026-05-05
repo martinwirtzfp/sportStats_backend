@@ -6,6 +6,7 @@ import com.sports.backend.team.v1.infrastructure.adapter.persistence.model.conve
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,6 +25,14 @@ public class TeamRepository implements TeamPort {
     @Override
     public List<Team> findByCompetitionId(final Long competitionId) {
         return converter.toDomainList(jpaRepository.findByCompetitionId(competitionId));
+    }
+
+    @Override
+    public List<Team> findAllByIds(final List<Long> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return converter.toDomainList(new ArrayList<>(jpaRepository.findAllById(ids)));
     }
 
     @Override

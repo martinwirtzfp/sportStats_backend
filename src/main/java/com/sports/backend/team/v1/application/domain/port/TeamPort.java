@@ -11,6 +11,8 @@ public interface TeamPort {
 
     List<Team> findByCompetitionId(Long competitionId);
 
+    List<Team> findAllByIds(List<Long> ids);
+
     Optional<Team> findById(Long id);
 
     Optional<Team> findByApiId(Integer apiId);

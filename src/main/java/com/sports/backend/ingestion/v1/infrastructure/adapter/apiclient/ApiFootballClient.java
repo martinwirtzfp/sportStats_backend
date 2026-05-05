@@ -46,7 +46,7 @@ public class ApiFootballClient implements ApiFootballPort {
     }
 
     @Override
-    public void ingestTeams(final Integer leagueApiId, final String season, final Long competitionId) {
+    public int ingestTeams(final Integer leagueApiId, final String season, final Long competitionId) {
         log.info("Ingesting teams for league#{} season={}", leagueApiId, season);
         try {
             final ApiTeamsResponse response = restClient.get()
@@ -56,9 +56,10 @@ public class ApiFootballClient implements ApiFootballPort {
 
             if (response == null || response.getResponse() == null) {
                 log.warn("No teams returned from API for league#{}", leagueApiId);
-                return;
+                return 0;
             }
 
+            int count = 0;
             for (final ApiTeamsResponse.TeamEntry entry : response.getResponse()) {
                 final ApiTeamsResponse.TeamInfo info = entry.getTeam();
                 if (teamPort.findByApiId(info.getId()).isPresent()) {
@@ -73,7 +74,9 @@ public class ApiFootballClient implements ApiFootballPort {
                 team.setCompetitionId(competitionId);
                 teamPort.save(team);
                 log.debug("Saved team: {}", info.getName());
+                count++;
             }
+            return count;
         } catch (final RestClientException ex) {
             log.error("Error calling API-Football /teams: {}", ex.getMessage());
             throw new ApplicationException(ApplicationError.APIFOOTBALL_ERROR, ex.getMessage());
@@ -81,7 +84,7 @@ public class ApiFootballClient implements ApiFootballPort {
     }
 
     @Override
-    public void ingestMatches(final Integer leagueApiId, final String season, final Long competitionId) {
+    public int ingestMatches(final Integer leagueApiId, final String season, final Long competitionId) {
         log.info("Ingesting matches for league#{} season={}", leagueApiId, season);
         try {
             final ApiFixturesResponse response = restClient.get()
@@ -91,13 +94,14 @@ public class ApiFootballClient implements ApiFootballPort {
 
             if (response == null || response.getResponse() == null) {
                 log.warn("No fixtures returned from API for league#{}", leagueApiId);
-                return;
+                return 0;
             }
 
             final String competitionName = competitionPort.findById(competitionId)
                     .map(c -> c.getName())
                     .orElse("");
 
+            int count = 0;
             for (final ApiFixturesResponse.FixtureEntry entry : response.getResponse()) {
                 final Long apiFixtureId = entry.getFixture().getId();
                 if (matchPort.findByApiId(apiFixtureId).isPresent()) {
@@ -136,7 +140,9 @@ public class ApiFootballClient implements ApiFootballPort {
 
                 matchPort.save(match);
                 log.debug("Saved match: {} vs {}", teams.getHome().getName(), teams.getAway().getName());
+                count++;
             }
+            return count;
         } catch (final RestClientException ex) {
             log.error("Error calling API-Football /fixtures: {}", ex.getMessage());
             throw new ApplicationException(ApplicationError.APIFOOTBALL_ERROR, ex.getMessage());

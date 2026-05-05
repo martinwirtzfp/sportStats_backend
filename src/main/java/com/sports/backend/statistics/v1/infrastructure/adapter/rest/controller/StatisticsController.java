@@ -23,28 +23,31 @@ public class StatisticsController {
     private final HeadToHeadService headToHeadService;
     private final StatisticsDtoConverter converter;
 
-    @Operation(summary = "Get team statistics for last N matches")
+    @Operation(summary = "Get team statistics for last N matches. Optional season filter (e.g. '2024').")
     @GetMapping("/api/statistics/teams/{teamId}")
     public ResponseEntity<TeamStatsDto> getTeamStats(
             @PathVariable final Long teamId,
-            @RequestParam(defaultValue = "10") final int lastN) {
-        return ResponseEntity.ok(converter.toDto(statisticsService.getTeamStats(teamId, lastN)));
+            @RequestParam(defaultValue = "10") final int lastN,
+            @RequestParam(required = false) final String season) {
+        return ResponseEntity.ok(converter.toDto(statisticsService.getTeamStats(teamId, lastN, season)));
     }
 
-    @Operation(summary = "Calculate risk probabilities for a match (1X2, Over/Under, BTTS, Half-time)")
+    @Operation(summary = "Calculate risk probabilities for a match (1X2, Over/Under, BTTS, Half-time). Optional season filter.")
     @GetMapping("/api/risk")
     public ResponseEntity<RiskAnalysisDto> calculateRisk(
             @RequestParam final Long homeTeamId,
             @RequestParam final Long awayTeamId,
-            @RequestParam(defaultValue = "10") final int lastN) {
-        return ResponseEntity.ok(converter.toDto(riskCalculationService.calculate(homeTeamId, awayTeamId, lastN)));
+            @RequestParam(defaultValue = "10") final int lastN,
+            @RequestParam(required = false) final String season) {
+        return ResponseEntity.ok(converter.toDto(riskCalculationService.calculate(homeTeamId, awayTeamId, lastN, season)));
     }
 
-    @Operation(summary = "Get head-to-head record between two teams")
+    @Operation(summary = "Get head-to-head record between two teams. Optional season filter.")
     @GetMapping("/api/h2h")
     public ResponseEntity<HeadToHeadDto> getHeadToHead(
             @RequestParam final Long team1Id,
-            @RequestParam final Long team2Id) {
-        return ResponseEntity.ok(converter.toDto(headToHeadService.getHeadToHead(team1Id, team2Id)));
+            @RequestParam final Long team2Id,
+            @RequestParam(required = false) final String season) {
+        return ResponseEntity.ok(converter.toDto(headToHeadService.getHeadToHead(team1Id, team2Id, season)));
     }
 }

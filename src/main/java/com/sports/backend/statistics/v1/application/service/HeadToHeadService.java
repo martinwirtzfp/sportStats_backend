@@ -20,15 +20,17 @@ public class HeadToHeadService {
     private final MatchPort matchPort;
     private final TeamPort teamPort;
 
-    public HeadToHead getHeadToHead(final Long team1Id, final Long team2Id) {
-        log.debug("Computing H2H between team#{} and team#{}", team1Id, team2Id);
+    public HeadToHead getHeadToHead(final Long team1Id, final Long team2Id, final String season) {
+        log.debug("Computing H2H between team#{} and team#{} season={}", team1Id, team2Id, season);
 
         final var team1 = teamPort.findById(team1Id)
                 .orElseThrow(() -> new ApplicationException(ApplicationError.TEAM_NOT_FOUND));
         final var team2 = teamPort.findById(team2Id)
                 .orElseThrow(() -> new ApplicationException(ApplicationError.TEAM_NOT_FOUND));
 
-        final List<Match> matches = matchPort.findByBothTeamIds(team1Id, team2Id);
+        final List<Match> matches = season != null
+                ? matchPort.findByBothTeamIds(team1Id, team2Id, season)
+                : matchPort.findByBothTeamIds(team1Id, team2Id);
 
         final HeadToHead h2h = new HeadToHead();
         h2h.setTeam1Id(team1Id);

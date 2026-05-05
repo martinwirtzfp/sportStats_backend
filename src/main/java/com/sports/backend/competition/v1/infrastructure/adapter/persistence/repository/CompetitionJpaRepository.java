@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface CompetitionJpaRepository extends JpaRepository<CompetitionEntity, Long> {
 
     Optional<CompetitionEntity> findByApiId(Integer apiId);
+
+    Optional<CompetitionEntity> findByApiIdAndSeason(Integer apiId, String season);
 }

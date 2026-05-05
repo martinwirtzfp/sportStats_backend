@@ -20,13 +20,15 @@ public class StatisticsService {
     private final MatchPort matchPort;
     private final TeamPort teamPort;
 
-    public TeamStats getTeamStats(final Long teamId, final int lastN) {
-        log.debug("Computing stats for team id#{} over last {} matches", teamId, lastN);
+    public TeamStats getTeamStats(final Long teamId, final int lastN, final String season) {
+        log.debug("Computing stats for team id#{} over last {} matches season={}", teamId, lastN, season);
 
         final var team = teamPort.findById(teamId)
                 .orElseThrow(() -> new ApplicationException(ApplicationError.TEAM_NOT_FOUND));
 
-        final List<Match> matches = matchPort.findByTeamId(teamId, lastN);
+        final List<Match> matches = season != null
+                ? matchPort.findByTeamId(teamId, lastN, season)
+                : matchPort.findByTeamId(teamId, lastN);
 
         final TeamStats stats = new TeamStats();
         stats.setTeamId(teamId);

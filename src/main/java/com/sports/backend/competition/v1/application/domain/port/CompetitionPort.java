@@ -13,5 +13,9 @@ public interface CompetitionPort {
 
     Optional<Competition> findByApiId(Integer apiId);
 
+    Optional<Competition> findByApiIdAndSeason(Integer apiId, String season);
+
     Competition save(Competition competition);
+
+    void deleteById(Long id);
 }

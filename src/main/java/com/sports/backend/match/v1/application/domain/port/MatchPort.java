@@ -14,9 +14,15 @@ public interface MatchPort {
 
     List<Match> findByTeamId(Long teamId, int limit);
 
+    List<Match> findByTeamId(Long teamId, int limit, String season);
+
     List<Match> findByBothTeamIds(Long team1Id, Long team2Id);
 
+    List<Match> findByBothTeamIds(Long team1Id, Long team2Id, String season);
+
     List<Match> findByCompetitionIdAndSeason(Long competitionId, String season);
+
+    List<Long> findDistinctTeamIdsByCompetitionAndSeason(Long competitionId, String season);
 
     Match save(Match match);
 

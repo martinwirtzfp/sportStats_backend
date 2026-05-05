@@ -1,5 +1,6 @@
 package com.sports.backend.team.v1.application.service;
 
+import com.sports.backend.match.v1.application.domain.port.MatchPort;
 import com.sports.backend.shared.v1.application.exception.ApplicationException;
 import com.sports.backend.shared.v1.application.exception.error.ApplicationError;
 import com.sports.backend.team.v1.application.domain.model.Team;
@@ -16,6 +17,7 @@ import java.util.List;
 public class TeamService {
 
     private final TeamPort teamPort;
+    private final MatchPort matchPort;
 
     public List<Team> findAll() {
         log.debug("Fetching all teams");
@@ -25,6 +27,12 @@ public class TeamService {
     public List<Team> findByCompetitionId(final Long competitionId) {
         log.debug("Fetching teams for competition id#{}", competitionId);
         return teamPort.findByCompetitionId(competitionId);
+    }
+
+    public List<Team> findByCompetitionAndSeason(final Long competitionId, final String season) {
+        log.debug("Fetching teams for competition id#{} season={} from match history", competitionId, season);
+        final List<Long> teamIds = matchPort.findDistinctTeamIdsByCompetitionAndSeason(competitionId, season);
+        return teamPort.findAllByIds(teamIds);
     }
 
     public Team findById(final Long id) {

@@ -21,7 +21,7 @@ public class DataIngestionController {
             @PathVariable final Integer leagueApiId,
             @RequestParam final String season,
             @RequestParam(defaultValue = "Unknown League") final String competitionName) {
-        dataIngestionService.ingestLeague(leagueApiId, season, competitionName);
-        return ResponseEntity.ok("Ingestion completed for leagueApiId=" + leagueApiId + " season=" + season);
+        final String result = dataIngestionService.ingestLeague(leagueApiId, season, competitionName);
+        return ResponseEntity.ok(result);
     }
 }

@@ -31,16 +31,20 @@ public class RiskCalculationService {
     private final MatchPort matchPort;
     private final TeamPort teamPort;
 
-    public RiskAnalysis calculate(final Long homeTeamId, final Long awayTeamId, final int lastN) {
-        log.debug("Calculating risk for home#{} vs away#{} over {} matches", homeTeamId, awayTeamId, lastN);
+    public RiskAnalysis calculate(final Long homeTeamId, final Long awayTeamId, final int lastN, final String season) {
+        log.debug("Calculating risk for home#{} vs away#{} over {} matches season={}", homeTeamId, awayTeamId, lastN, season);
 
         final var homeTeam = teamPort.findById(homeTeamId)
                 .orElseThrow(() -> new ApplicationException(ApplicationError.TEAM_NOT_FOUND));
         final var awayTeam = teamPort.findById(awayTeamId)
                 .orElseThrow(() -> new ApplicationException(ApplicationError.TEAM_NOT_FOUND));
 
-        final List<Match> homeMatches = matchPort.findByTeamId(homeTeamId, lastN);
-        final List<Match> awayMatches = matchPort.findByTeamId(awayTeamId, lastN);
+        final List<Match> homeMatches = season != null
+                ? matchPort.findByTeamId(homeTeamId, lastN, season)
+                : matchPort.findByTeamId(homeTeamId, lastN);
+        final List<Match> awayMatches = season != null
+                ? matchPort.findByTeamId(awayTeamId, lastN, season)
+                : matchPort.findByTeamId(awayTeamId, lastN);
 
         final RiskAnalysis risk = new RiskAnalysis();
         risk.setHomeTeamId(homeTeamId);

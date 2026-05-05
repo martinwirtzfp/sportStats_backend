@@ -32,7 +32,17 @@ public class CompetitionRepository implements CompetitionPort {
     }
 
     @Override
+    public Optional<Competition> findByApiIdAndSeason(final Integer apiId, final String season) {
+        return jpaRepository.findByApiIdAndSeason(apiId, season).map(converter::toDomain);
+    }
+
+    @Override
     public Competition save(final Competition competition) {
         return converter.toDomain(jpaRepository.save(converter.toEntity(competition)));
+    }
+
+    @Override
+    public void deleteById(final Long id) {
+        jpaRepository.deleteById(id);
     }
 }

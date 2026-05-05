@@ -20,13 +20,19 @@ public class TeamController {
     private final TeamService teamService;
     private final TeamDtoConverter converter;
 
-    @Operation(summary = "Get all teams, optionally filtered by competition")
+    @Operation(summary = "Get all teams. Filter by competition and optionally by season (derived from match history).")
     @GetMapping
     public ResponseEntity<List<TeamDto>> findAll(
-            @RequestParam(required = false) final Long competitionId) {
-        final List<TeamDto> result = competitionId != null
-                ? converter.toDtoList(teamService.findByCompetitionId(competitionId))
-                : converter.toDtoList(teamService.findAll());
+            @RequestParam(required = false) final Long competitionId,
+            @RequestParam(required = false) final String season) {
+        final List<TeamDto> result;
+        if (competitionId != null && season != null) {
+            result = converter.toDtoList(teamService.findByCompetitionAndSeason(competitionId, season));
+        } else if (competitionId != null) {
+            result = converter.toDtoList(teamService.findByCompetitionId(competitionId));
+        } else {
+            result = converter.toDtoList(teamService.findAll());
+        }
         if (result.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
