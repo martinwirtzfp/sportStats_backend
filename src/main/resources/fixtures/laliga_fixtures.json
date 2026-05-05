@@ -1,0 +1,124 @@
+{
+  "response": [
+    {
+      "fixture": { "id": 1001, "date": "2024-10-26T20:00:00+00:00", "status": { "short": "FT" } },
+      "league": { "season": "2024", "name": "La Liga" },
+      "teams": {
+        "home": { "id": 541, "name": "Real Madrid", "logo": "https://media.api-sports.io/football/teams/541.png" },
+        "away": { "id": 529, "name": "FC Barcelona", "logo": "https://media.api-sports.io/football/teams/529.png" }
+      },
+      "goals": { "home": 4, "away": 0 },
+      "score": { "halftime": { "home": 2, "away": 0 } }
+    },
+    {
+      "fixture": { "id": 1002, "date": "2024-11-10T21:00:00+00:00", "status": { "short": "FT" } },
+      "league": { "season": "2024", "name": "La Liga" },
+      "teams": {
+        "home": { "id": 529, "name": "FC Barcelona", "logo": "https://media.api-sports.io/football/teams/529.png" },
+        "away": { "id": 530, "name": "Atletico Madrid", "logo": "https://media.api-sports.io/football/teams/530.png" }
+      },
+      "goals": { "home": 2, "away": 1 },
+      "score": { "halftime": { "home": 1, "away": 1 } }
+    },
+    {
+      "fixture": { "id": 1003, "date": "2024-11-24T20:00:00+00:00", "status": { "short": "FT" } },
+      "league": { "season": "2024", "name": "La Liga" },
+      "teams": {
+        "home": { "id": 530, "name": "Atletico Madrid", "logo": "https://media.api-sports.io/football/teams/530.png" },
+        "away": { "id": 541, "name": "Real Madrid", "logo": "https://media.api-sports.io/football/teams/541.png" }
+      },
+      "goals": { "home": 1, "away": 1 },
+      "score": { "halftime": { "home": 0, "away": 1 } }
+    },
+    {
+      "fixture": { "id": 1004, "date": "2024-12-01T20:00:00+00:00", "status": { "short": "FT" } },
+      "league": { "season": "2024", "name": "La Liga" },
+      "teams": {
+        "home": { "id": 536, "name": "Sevilla FC", "logo": "https://media.api-sports.io/football/teams/536.png" },
+        "away": { "id": 529, "name": "FC Barcelona", "logo": "https://media.api-sports.io/football/teams/529.png" }
+      },
+      "goals": { "home": 0, "away": 3 },
+      "score": { "halftime": { "home": 0, "away": 2 } }
+    },
+    {
+      "fixture": { "id": 1005, "date": "2024-12-08T20:00:00+00:00", "status": { "short": "FT" } },
+      "league": { "season": "2024", "name": "La Liga" },
+      "teams": {
+        "home": { "id": 541, "name": "Real Madrid", "logo": "https://media.api-sports.io/football/teams/541.png" },
+        "away": { "id": 536, "name": "Sevilla FC", "logo": "https://media.api-sports.io/football/teams/536.png" }
+      },
+      "goals": { "home": 4, "away": 1 },
+      "score": { "halftime": { "home": 2, "away": 0 } }
+    },
+    {
+      "fixture": { "id": 1006, "date": "2024-12-15T20:00:00+00:00", "status": { "short": "FT" } },
+      "league": { "season": "2024", "name": "La Liga" },
+      "teams": {
+        "home": { "id": 532, "name": "Valencia CF", "logo": "https://media.api-sports.io/football/teams/532.png" },
+        "away": { "id": 541, "name": "Real Madrid", "logo": "https://media.api-sports.io/football/teams/541.png" }
+      },
+      "goals": { "home": 1, "away": 2 },
+      "score": { "halftime": { "home": 1, "away": 1 } }
+    },
+    {
+      "fixture": { "id": 1007, "date": "2024-12-22T20:00:00+00:00", "status": { "short": "FT" } },
+      "league": { "season": "2024", "name": "La Liga" },
+      "teams": {
+        "home": { "id": 529, "name": "FC Barcelona", "logo": "https://media.api-sports.io/football/teams/529.png" },
+        "away": { "id": 548, "name": "Real Sociedad", "logo": "https://media.api-sports.io/football/teams/548.png" }
+      },
+      "goals": { "home": 3, "away": 0 },
+      "score": { "halftime": { "home": 1, "away": 0 } }
+    },
+    {
+      "fixture": { "id": 1008, "date": "2025-01-05T20:00:00+00:00", "status": { "short": "FT" } },
+      "league": { "season": "2024", "name": "La Liga" },
+      "teams": {
+        "home": { "id": 530, "name": "Atletico Madrid", "logo": "https://media.api-sports.io/football/teams/530.png" },
+        "away": { "id": 536, "name": "Sevilla FC", "logo": "https://media.api-sports.io/football/teams/536.png" }
+      },
+      "goals": { "home": 2, "away": 0 },
+      "score": { "halftime": { "home": 1, "away": 0 } }
+    },
+    {
+      "fixture": { "id": 1009, "date": "2025-01-12T20:00:00+00:00", "status": { "short": "FT" } },
+      "league": { "season": "2024", "name": "La Liga" },
+      "teams": {
+        "home": { "id": 533, "name": "Villarreal CF", "logo": "https://media.api-sports.io/football/teams/533.png" },
+        "away": { "id": 530, "name": "Atletico Madrid", "logo": "https://media.api-sports.io/football/teams/530.png" }
+      },
+      "goals": { "home": 1, "away": 2 },
+      "score": { "halftime": { "home": 0, "away": 1 } }
+    },
+    {
+      "fixture": { "id": 1010, "date": "2025-01-19T20:00:00+00:00", "status": { "short": "FT" } },
+      "league": { "season": "2024", "name": "La Liga" },
+      "teams": {
+        "home": { "id": 541, "name": "Real Madrid", "logo": "https://media.api-sports.io/football/teams/541.png" },
+        "away": { "id": 543, "name": "Real Betis", "logo": "https://media.api-sports.io/football/teams/543.png" }
+      },
+      "goals": { "home": 3, "away": 2 },
+      "score": { "halftime": { "home": 1, "away": 1 } }
+    },
+    {
+      "fixture": { "id": 1011, "date": "2025-01-26T20:00:00+00:00", "status": { "short": "FT" } },
+      "league": { "season": "2024", "name": "La Liga" },
+      "teams": {
+        "home": { "id": 529, "name": "FC Barcelona", "logo": "https://media.api-sports.io/football/teams/529.png" },
+        "away": { "id": 541, "name": "Real Madrid", "logo": "https://media.api-sports.io/football/teams/541.png" }
+      },
+      "goals": { "home": 5, "away": 2 },
+      "score": { "halftime": { "home": 3, "away": 1 } }
+    },
+    {
+      "fixture": { "id": 1012, "date": "2025-02-02T20:00:00+00:00", "status": { "short": "FT" } },
+      "league": { "season": "2024", "name": "La Liga" },
+      "teams": {
+        "home": { "id": 536, "name": "Sevilla FC", "logo": "https://media.api-sports.io/football/teams/536.png" },
+        "away": { "id": 530, "name": "Atletico Madrid", "logo": "https://media.api-sports.io/football/teams/530.png" }
+      },
+      "goals": { "home": 1, "away": 3 },
+      "score": { "halftime": { "home": 1, "away": 1 } }
+    }
+  ]
+}

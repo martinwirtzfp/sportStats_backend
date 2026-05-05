@@ -41,8 +41,7 @@ public class ApiFootballClient implements ApiFootballPort {
         this.competitionPort = competitionPort;
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
-                .defaultHeader("x-rapidapi-key", apiKey)
-                .defaultHeader("x-rapidapi-host", "v3.football.api-sports.io")
+                .defaultHeader("x-apisports-key", apiKey)
                 .build();
     }
 

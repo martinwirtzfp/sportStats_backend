@@ -1,0 +1,28 @@
+{
+  "response": [
+    {
+      "team": { "id": 541, "name": "Real Madrid", "code": "RMA", "logo": "https://media.api-sports.io/football/teams/541.png" }
+    },
+    {
+      "team": { "id": 529, "name": "FC Barcelona", "code": "BAR", "logo": "https://media.api-sports.io/football/teams/529.png" }
+    },
+    {
+      "team": { "id": 530, "name": "Atletico Madrid", "code": "ATM", "logo": "https://media.api-sports.io/football/teams/530.png" }
+    },
+    {
+      "team": { "id": 536, "name": "Sevilla FC", "code": "SEV", "logo": "https://media.api-sports.io/football/teams/536.png" }
+    },
+    {
+      "team": { "id": 532, "name": "Valencia CF", "code": "VAL", "logo": "https://media.api-sports.io/football/teams/532.png" }
+    },
+    {
+      "team": { "id": 533, "name": "Villarreal CF", "code": "VIL", "logo": "https://media.api-sports.io/football/teams/533.png" }
+    },
+    {
+      "team": { "id": 543, "name": "Real Betis", "code": "BET", "logo": "https://media.api-sports.io/football/teams/543.png" }
+    },
+    {
+      "team": { "id": 548, "name": "Real Sociedad", "code": "RSO", "logo": "https://media.api-sports.io/football/teams/548.png" }
+    }
+  ]
+}
