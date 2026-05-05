@@ -15,13 +15,13 @@ public class DataIngestionController {
 
     private final DataIngestionService dataIngestionService;
 
-    @Operation(summary = "Ingest teams and matches for a league/season")
+    @Operation(summary = "Ingest teams and matches for a league/season. Creates the competition automatically if it does not exist.")
     @PostMapping("/leagues/{leagueApiId}")
     public ResponseEntity<String> ingestLeague(
             @PathVariable final Integer leagueApiId,
             @RequestParam final String season,
-            @RequestParam final Long competitionId) {
-        dataIngestionService.ingestLeague(leagueApiId, season, competitionId);
+            @RequestParam(defaultValue = "Unknown League") final String competitionName) {
+        dataIngestionService.ingestLeague(leagueApiId, season, competitionName);
         return ResponseEntity.ok("Ingestion completed for leagueApiId=" + leagueApiId + " season=" + season);
     }
 }

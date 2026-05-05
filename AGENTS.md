@@ -59,7 +59,7 @@ Remove-Item -Recurse -Force target
 |--------|-------------|
 | `dev` (default) | H2 en memoria, `create-drop`, sin fixture loader |
 | `json` | H2 en memoria + `JsonDataLoaderRunner` carga datos de `src/main/resources/fixtures/` |
-| `local-db` | H2 en fichero (`~/sportstatsdb.mv.db`), `update`, datos persistentes entre reinicios. Usar con ingesta real. |
+| `local-db` | H2 en fichero (`~/sportstatsdb.mv.db`), `update`, datos persistentes entre reinicios. Usar con ingesta real. Arrancar con `./mvnw spring-boot:run "-Dspring-boot.run.profiles=local-db"` |
 
 ### Datos cargados en perfil `json`
 
@@ -97,13 +97,14 @@ El fichero `application-local.properties` está en `.gitignore`. **Nunca committ
 
 URL del dashboard: https://dashboard.api-football.com/
 
-### H2 Console (solo en dev/json)
-URL: `http://localhost:8090/h2-console`  
-JDBC URL: `jdbc:h2:mem:sportstatsdb`  
-Usuario: `sa` / Contraseña: (vacía)
+### H2 Console
+- Perfiles `dev`/`json`: URL `http://localhost:8090/h2-console`, JDBC URL `jdbc:h2:mem:sportstatsdb`
+- Perfil `local-db`: URL `http://localhost:8090/h2-console`, JDBC URL `jdbc:h2:file:~/sportstatsdb`
+- Usuario: `sa` / Contraseña: (vacía)
 
 ### Swagger UI
-URL: `http://localhost:8090/swagger-ui.html`
+URL: `http://localhost:8090/swagger-ui.html`  
+**Autorización**: en el botón "Authorize" de Swagger pegar el token JWT directamente, **sin prefijo "Bearer "** (Swagger lo añade solo).
 
 ---
 
@@ -197,11 +198,14 @@ Tres servicios independientes:
 El `UserController` extrae el `userId` del JWT (campo custom `"userId"` en el claim). La extracción tiene validación de null en el header Authorization.
 
 ### ingestion
-- `POST /api/ingestion/leagues/{leagueApiId}?season=XXXX&competitionId=YY`
+- `POST /api/ingestion/leagues/{leagueApiId}?season=XXXX&competitionName=NombreCompeticion`
 - Requiere JWT. Llama a API-Football para traer equipos y partidos.
+- **Crea la competición automáticamente** si no existe (busca por `apiId`); si ya existe la reutiliza.
+- `competitionName` tiene valor por defecto `"Unknown League"` — se recomienda pasar el nombre real.
 - Header que usa: `x-apisports-key` (**NO** `x-rapidapi-key`)
 - Base URL: `https://v3.football.api-sports.io`
-- Evita duplicados por `apiId`
+- Evita duplicados por `apiId` (equipos y partidos)
+- Ejemplo: `POST /api/ingestion/leagues/140?season=2024&competitionName=La%20Liga` → ingesta La Liga 2024/25 (~2 llamadas a la API externa)
 
 ---
 
@@ -218,8 +222,10 @@ GET  /api/h2h/**
 POST /api/auth/register
 POST /api/auth/login
 GET  /h2-console/**
+GET  /swagger-ui.html
 GET  /swagger-ui/**
 GET  /v3/api-docs/**
+GET  /v3/api-docs.yaml
 ```
 
 ### Endpoints protegidos (requieren JWT)
@@ -282,6 +288,8 @@ APIFOOTBALL_ERROR        502
 | `SecurityConfig` | `DaoAuthenticationProvider` usaba setter en lugar de constructor | Cambiado a constructor `new DaoAuthenticationProvider(userDetailsService)` |
 | `application-dev.properties` | `spring.jpa.database-platform=org.hibernate.dialect.H2Dialect` (deprecado en Hibernate 6) | Eliminado (auto-detección) |
 | `UserController` | `extractUserId` sin null check en Authorization header | Añadida validación |
+| `SecurityConfig` | `requestMatchers("/swagger-ui/**")` no cubría `/swagger-ui.html` → 403 al acceder a Swagger | Añadido `/swagger-ui.html` y `/v3/api-docs.yaml` explícitamente |
+| `DataIngestionController` | Requería `competitionId` (Long) que debía existir previamente en BD — imposible con perfil `local-db` vacío | Cambiado a `competitionName` (String); `DataIngestionService` crea la competición automáticamente si no existe |
 
 ---
 
