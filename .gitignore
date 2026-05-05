@@ -4,6 +4,9 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+# Local secrets (API keys, etc.) — never commit
+application-local.properties
+
 ### STS ###
 .apt_generated
 .classpath

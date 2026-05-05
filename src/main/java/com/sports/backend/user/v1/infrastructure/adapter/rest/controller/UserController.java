@@ -51,6 +51,9 @@ public class UserController {
 
     private Long extractUserId(final HttpServletRequest request) {
         final String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new IllegalStateException("Missing or invalid Authorization header");
+        }
         final String token = authHeader.substring(7);
         return jwtService.extractUserId(token);
     }

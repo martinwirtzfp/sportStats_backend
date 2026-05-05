@@ -23,8 +23,8 @@ public interface MatchJpaRepository extends JpaRepository<MatchEntity, Long> {
 
     @Query("""
             SELECT m FROM MatchEntity m
-            WHERE (m.homeTeamId = :team1Id AND m.awayTeamId = :team2Id)
-               OR (m.homeTeamId = :team2Id AND m.awayTeamId = :team1Id)
+            WHERE ((m.homeTeamId = :team1Id AND m.awayTeamId = :team2Id)
+               OR (m.homeTeamId = :team2Id AND m.awayTeamId = :team1Id))
             AND m.status = 'FINISHED'
             ORDER BY m.matchDate DESC
             """)
