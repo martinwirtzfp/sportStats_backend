@@ -23,6 +23,6 @@ public class UserEntity {
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", columnDefinition = "datetime")
     private Instant createdAt;
 }

@@ -32,7 +32,7 @@ public class MatchEntity {
     @Column(name = "away_team_logo", length = 500)
     private String awayTeamLogo;
 
-    @Column(name = "match_date")
+    @Column(name = "match_date", columnDefinition = "datetime")
     private Instant matchDate;
 
     @Column(length = 20)
