@@ -181,12 +181,15 @@ Tres servicios independientes:
 - Endpoint: `GET /api/statistics/teams/{teamId}?lastN=10` (0 = todos)
 
 #### RiskCalculationService — probabilidades de apuestas
-- `calculate(homeTeamId, awayTeamId, lastN)`: modelo de probabilidad con decaimiento exponencial (λ=0.1)- `lastN = 0` significa "todos los partidos disponibles"- Todos los campos de porcentaje están en escala **0-100** (NO 0-1)
+- `calculate(homeTeamId, awayTeamId)`: modelo Poisson independiente con decaimiento temporal
+- **Algoritmo**: para cada equipo se calculan tasas ponderadas de goles marcados/concedidos usando **decaimiento exponencial por fecha** (`weight = exp(-κ × días)`, κ=0.003, semivida ≈231 días). Se estiman goles esperados `μ_home` y `μ_away` combinando tasa de ataque del local con tasa de defensa del visitante (y viceversa) más factor de ventaja local (HOME_ADVANTAGE=1.15). Se construye una **matriz de puntuaciones Poisson** `P(i,j)` para i,j∈{0..10} y se derivan TODOS los mercados (1X2, Over/Under 2.5, BTTS, descanso) analíticamente de la matriz.
+- Usa **todos los partidos históricos disponibles** sin filtro de temporada ni límite de cantidad (siempre `findAllByTeamId`).
+- Todos los campos de porcentaje están en escala **0-100** (NO 0-1)
   - `probability1X2.homeWin/draw/awayWin`: porcentajes 1X2
   - `overPercentage`, `underPercentage`: más/menos de 2.5 goles
   - `bttsYesPercentage`, `bttsNoPercentage`: ambos equipos marcan
-  - `halfTimeProbability.*`: resultado al descanso
-- Endpoint: `GET /api/risk?homeTeamId=X&awayTeamId=Y&lastN=10`
+  - `halfTimeProbability.*`: resultado al descanso (misma lógica Poisson con goles HT)
+- Endpoint: `GET /api/risk?homeTeamId=X&awayTeamId=Y`
 
 #### HeadToHeadService — historial entre dos equipos
 - `getHeadToHead(team1Id, team2Id, season?)`: victorias, empates, promedios de goles, BTTS, over/under, clean sheets, resultado al descanso, marcador más repetido
@@ -298,7 +301,8 @@ APIFOOTBALL_ERROR        502
 | `UserController` | `extractUserId` sin null check en Authorization header | Añadida validación |
 | `SecurityConfig` | `requestMatchers("/swagger-ui/**")` no cubría `/swagger-ui.html` → 403 al acceder a Swagger | Añadido `/swagger-ui.html` y `/v3/api-docs.yaml` explícitamente |
 | `DataIngestionController` | Requería `competitionId` (Long) que debía existir previamente en BD — imposible con perfil `local-db` vacío | Cambiado a `competitionName` (String); `DataIngestionService` crea la competición automáticamente si no existe |
-| `HeadToHeadService` | Al reescribir el método con nuevas estadísticas (over/under, clean sheets, etc.), `replace_string_in_file` añadió el nuevo código sin borrar el antiguo → clase con dos constructores, dos `getHeadToHead` y dos `round`, error `Unresolved compilation problems` al arrancar | El viejo bloque duplicado fue eliminado manualmente; el archivo quedó con una única implementación completa |
+| `RiskCalculationService` | Decay aplicado por índice de lista en lugar de días reales; 1X2 como promedio crudo de tasas de victoria/derrota; Over/Under y BTTS sin ponderación | Reemplazado por modelo Poisson independiente con decaimiento temporal basado en fecha real (`exp(-κ × days)`) y matriz de puntuaciones |
+| `StatisticsController` `/api/risk` | Tenía parámetros `lastN` y `season` que no aplican a predicciones (deben usarse todos los datos históricos) | Parámetros eliminados; ahora solo `homeTeamId` y `awayTeamId` |
 | `MatchStatisticsEntity`, `MatchStatistics`, `MatchStatisticsJpaRepository`, `MatchPort.saveStatistics`, `MatchRepository.saveStatistics`, `MatchEntityConverter` (métodos stats) | Subsistema `match_statistics` completamente inactivo — tabla siempre vacía, ningún servicio llamaba a `saveStatistics` | Los 3 archivos eliminados, métodos de puerto/repositorio/converter eliminados. Purga total del código muerto |
 | `MatchPort.findByCompetitionIdAndSeason`, `MatchRepository.findByCompetitionIdAndSeason`, `MatchJpaRepository.findByCompetitionIdAndSeason` | Método declarado, implementado y nunca llamado por ningún servicio | Eliminado de los tres niveles de la cadena |
 

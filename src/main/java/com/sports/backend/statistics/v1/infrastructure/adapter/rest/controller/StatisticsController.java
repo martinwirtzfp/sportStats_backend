@@ -32,14 +32,12 @@ public class StatisticsController {
         return ResponseEntity.ok(converter.toDto(statisticsService.getTeamStats(teamId, lastN, season)));
     }
 
-    @Operation(summary = "Calculate risk probabilities for a match (1X2, Over/Under, BTTS, Half-time). Optional season filter.")
+    @Operation(summary = "Calculate risk probabilities for a match (1X2, Over/Under, BTTS, Half-time) using all available historical data weighted by recency.")
     @GetMapping("/api/risk")
     public ResponseEntity<RiskAnalysisDto> calculateRisk(
             @RequestParam final Long homeTeamId,
-            @RequestParam final Long awayTeamId,
-            @RequestParam(defaultValue = "10") final int lastN,
-            @RequestParam(required = false) final String season) {
-        return ResponseEntity.ok(converter.toDto(riskCalculationService.calculate(homeTeamId, awayTeamId, lastN, season)));
+            @RequestParam final Long awayTeamId) {
+        return ResponseEntity.ok(converter.toDto(riskCalculationService.calculate(homeTeamId, awayTeamId)));
     }
 
     @Operation(summary = "Get head-to-head record between two teams. Optional season filter.")

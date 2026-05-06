@@ -11,199 +11,181 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
- * Risk calculation service.
+ * Risk calculation service based on an independent Poisson model.
  *
- * <p>Computes betting probabilities based on recent match history using a
- * weighted recency model: more recent matches receive higher weight via
- * exponential decay (weight = e^(-lambda * index)).
+ * <p>For each team, weighted attack and defense rates are computed from ALL
+ * available historical matches (no season filter). Matches are weighted by
+ * recency using exponential time-decay: {@code weight = e^(-KAPPA * days_ago)},
+ * giving a half-life of ~231 days. Expected goals for each team are derived
+ * by combining attack strength with opponent defensive weakness plus a home
+ * advantage factor. A score-probability matrix is built from two independent
+ * Poisson distributions and all betting markets (1X2, Over/Under, BTTS,
+ * half-time) are derived from that matrix.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class RiskCalculationService {
 
-    private static final double DECAY_LAMBDA = 0.1;
-    private static final double OVER_UNDER_THRESHOLD = 2.5;
+    /** Exponential decay rate per day (half-life ≈ 231 days ≈ 7.5 months). */
+    private static final double DECAY_KAPPA = 0.003;
+
+    /** Home teams score ~15% more goals on average across major leagues. */
+    private static final double HOME_ADVANTAGE = 1.15;
+
+    /** Maximum score simulated per team (captures >99.9% of real matches). */
+    private static final int MAX_GOALS = 10;
 
     private final MatchPort matchPort;
     private final TeamPort teamPort;
 
-    public RiskAnalysis calculate(final Long homeTeamId, final Long awayTeamId, final int lastN, final String season) {
-        log.debug("Calculating risk for home#{} vs away#{} over {} matches season={}", homeTeamId, awayTeamId, lastN, season);
+    /**
+     * Computes risk probabilities for a hypothetical match between {@code homeTeamId}
+     * and {@code awayTeamId} using all available historical data for both teams.
+     */
+    public RiskAnalysis calculate(final Long homeTeamId, final Long awayTeamId) {
+        log.debug("Calculating Poisson risk for home#{} vs away#{}", homeTeamId, awayTeamId);
 
         final var homeTeam = teamPort.findById(homeTeamId)
                 .orElseThrow(() -> new ApplicationException(ApplicationError.TEAM_NOT_FOUND));
         final var awayTeam = teamPort.findById(awayTeamId)
                 .orElseThrow(() -> new ApplicationException(ApplicationError.TEAM_NOT_FOUND));
 
-        final List<Match> homeMatches;
-        final List<Match> awayMatches;
-        if (lastN <= 0) {
-            homeMatches = season != null ? matchPort.findAllByTeamId(homeTeamId, season) : matchPort.findAllByTeamId(homeTeamId);
-            awayMatches = season != null ? matchPort.findAllByTeamId(awayTeamId, season) : matchPort.findAllByTeamId(awayTeamId);
-        } else {
-            homeMatches = season != null ? matchPort.findByTeamId(homeTeamId, lastN, season) : matchPort.findByTeamId(homeTeamId, lastN);
-            awayMatches = season != null ? matchPort.findByTeamId(awayTeamId, lastN, season) : matchPort.findByTeamId(awayTeamId, lastN);
-        }
+        final List<Match> homeMatches = matchPort.findAllByTeamId(homeTeamId);
+        final List<Match> awayMatches = matchPort.findAllByTeamId(awayTeamId);
 
         final RiskAnalysis risk = new RiskAnalysis();
         risk.setHomeTeamId(homeTeamId);
         risk.setHomeTeamName(homeTeam.getName());
         risk.setAwayTeamId(awayTeamId);
         risk.setAwayTeamName(awayTeam.getName());
-        risk.setLastN(lastN);
+        risk.setLastN(0);
 
-        risk.setProbability1X2(calc1X2(homeTeamId, awayTeamId, homeMatches, awayMatches));
-        risk.setHalfTimeProbability(calcHalfTime(homeTeamId, awayTeamId, homeMatches, awayMatches));
-        calcOverUnderAndBtts(risk, homeMatches, awayMatches);
+        // --- Full-time expected goals via attack/defense blend ---
+        final double[] homeRates = computeWeightedGoalRates(homeTeamId, homeMatches);
+        final double[] awayRates = computeWeightedGoalRates(awayTeamId, awayMatches);
+        // [0] = weighted avg goals scored, [1] = weighted avg goals conceded
+
+        final double muHome = ((homeRates[0] + awayRates[1]) / 2.0) * HOME_ADVANTAGE;
+        final double muAway = (awayRates[0] + homeRates[1]) / 2.0 / HOME_ADVANTAGE;
+
+        final double[][] matrix = buildScoreMatrix(muHome, muAway);
+        risk.setProbability1X2(derive1X2(matrix));
+        calcGoalMarkets(risk, matrix, muHome, muAway);
+
+        // --- Half-time expected goals ---
+        final double[] homeHtRates = computeWeightedHtGoalRates(homeTeamId, homeMatches);
+        final double[] awayHtRates = computeWeightedHtGoalRates(awayTeamId, awayMatches);
+
+        final double muHomeHt = ((homeHtRates[0] + awayHtRates[1]) / 2.0) * HOME_ADVANTAGE;
+        final double muAwayHt = (awayHtRates[0] + homeHtRates[1]) / 2.0 / HOME_ADVANTAGE;
+
+        risk.setHalfTimeProbability(derive1X2(buildScoreMatrix(muHomeHt, muAwayHt)));
 
         return risk;
     }
 
     /**
-     * 1X2 probability using weighted win/draw/loss rates per team.
-     *
-     * <p>Home advantage: home team's home win rate + away team's away loss rate weighted 50/50.
+     * Returns {@code [weightedAvgScored, weightedAvgConceded]} for the given team
+     * across all provided matches, using date-based exponential decay weights.
      */
-    private Probability1X2 calc1X2(
-            final Long homeTeamId, final Long awayTeamId,
-            final List<Match> homeMatches, final List<Match> awayMatches) {
-
-        // Weighted rates for home team playing at home
-        double homeWinWeight = 0, homeDrawWeight = 0, homeLossWeight = 0;
-        double homeTotal = 0;
-        for (int i = 0; i < homeMatches.size(); i++) {
-            final Match m = homeMatches.get(i);
+    private double[] computeWeightedGoalRates(final Long teamId, final List<Match> matches) {
+        final Instant now = Instant.now();
+        double wScored = 0, wConceded = 0, wTotal = 0;
+        for (final Match m : matches) {
             if (m.getHomeGoals() == null || m.getAwayGoals() == null) continue;
-            final double w = Math.exp(-DECAY_LAMBDA * i);
-            homeTotal += w;
-            final boolean isHome = m.getHomeTeamId().equals(homeTeamId);
-            final int scored = isHome ? m.getHomeGoals() : m.getAwayGoals();
-            final int conceded = isHome ? m.getAwayGoals() : m.getHomeGoals();
-            if (scored > conceded) homeWinWeight += w;
-            else if (scored == conceded) homeDrawWeight += w;
-            else homeLossWeight += w;
+            final long daysAgo = m.getMatchDate() != null
+                    ? ChronoUnit.DAYS.between(m.getMatchDate(), now) : 365L;
+            final double w = Math.exp(-DECAY_KAPPA * daysAgo);
+            wTotal += w;
+            final boolean isHome = teamId.equals(m.getHomeTeamId());
+            wScored   += w * (isHome ? m.getHomeGoals() : m.getAwayGoals());
+            wConceded += w * (isHome ? m.getAwayGoals() : m.getHomeGoals());
         }
+        if (wTotal == 0) return new double[]{1.2, 1.2}; // fallback: typical league average
+        return new double[]{wScored / wTotal, wConceded / wTotal};
+    }
 
-        // Weighted rates for away team playing away
-        double awayWinWeight = 0, awayDrawWeight = 0, awayLossWeight = 0;
-        double awayTotal = 0;
-        for (int i = 0; i < awayMatches.size(); i++) {
-            final Match m = awayMatches.get(i);
-            if (m.getHomeGoals() == null || m.getAwayGoals() == null) continue;
-            final double w = Math.exp(-DECAY_LAMBDA * i);
-            awayTotal += w;
-            final boolean isHome = m.getHomeTeamId().equals(awayTeamId);
-            final int scored = isHome ? m.getHomeGoals() : m.getAwayGoals();
-            final int conceded = isHome ? m.getAwayGoals() : m.getHomeGoals();
-            if (scored > conceded) awayWinWeight += w;
-            else if (scored == conceded) awayDrawWeight += w;
-            else awayLossWeight += w;
+    /** Same as {@link #computeWeightedGoalRates} but using half-time goal columns. */
+    private double[] computeWeightedHtGoalRates(final Long teamId, final List<Match> matches) {
+        final Instant now = Instant.now();
+        double wScored = 0, wConceded = 0, wTotal = 0;
+        for (final Match m : matches) {
+            if (m.getHtHomeGoals() == null || m.getHtAwayGoals() == null) continue;
+            final long daysAgo = m.getMatchDate() != null
+                    ? ChronoUnit.DAYS.between(m.getMatchDate(), now) : 365L;
+            final double w = Math.exp(-DECAY_KAPPA * daysAgo);
+            wTotal += w;
+            final boolean isHome = teamId.equals(m.getHomeTeamId());
+            wScored   += w * (isHome ? m.getHtHomeGoals() : m.getHtAwayGoals());
+            wConceded += w * (isHome ? m.getHtAwayGoals() : m.getHtHomeGoals());
         }
-
-        // Normalize to [0,1]
-        final double homeWinRate = homeTotal > 0 ? homeWinWeight / homeTotal : 0.33;
-        final double homeDrawRate = homeTotal > 0 ? homeDrawWeight / homeTotal : 0.33;
-        final double awayWinRate = awayTotal > 0 ? awayWinWeight / awayTotal : 0.33;
-        final double awayDrawRate = awayTotal > 0 ? awayDrawWeight / awayTotal : 0.33;
-        final double awayLossRate = awayTotal > 0 ? awayLossWeight / awayTotal : 0.33;
-
-        // Blend: home win = home team's win rate contribution vs away team's loss rate
-        double rawHome = (homeWinRate + awayLossRate) / 2.0;
-        double rawDraw = (homeDrawRate + awayDrawRate) / 2.0;
-        double rawAway = (awayWinRate + (homeTotal > 0 ? homeLossWeight / homeTotal : 0.33)) / 2.0;
-
-        // Normalize to 100%
-        final double sum = rawHome + rawDraw + rawAway;
-        if (sum == 0) {
-            rawHome = rawDraw = rawAway = 1.0 / 3;
-        }
-
-        final Probability1X2 p = new Probability1X2();
-        p.setHomeWin(round(rawHome / sum * 100));
-        p.setDraw(round(rawDraw / sum * 100));
-        p.setAwayWin(round(rawAway / sum * 100));
-        return p;
+        if (wTotal == 0) return new double[]{0.5, 0.5}; // fallback: ~HT league average
+        return new double[]{wScored / wTotal, wConceded / wTotal};
     }
 
     /**
-     * Half-time 1X2 using ht_home_goals and ht_away_goals.
+     * Builds an {@code (MAX_GOALS+1) × (MAX_GOALS+1)} score-probability matrix.
+     * Entry {@code [i][j]} = P(homeGoals=i) × P(awayGoals=j) (independent Poisson).
      */
-    private Probability1X2 calcHalfTime(
-            final Long homeTeamId, final Long awayTeamId,
-            final List<Match> homeMatches, final List<Match> awayMatches) {
-
-        int htHome = 0, htDraw = 0, htAway = 0, htTotal = 0;
-        for (final Match m : homeMatches) {
-            if (m.getHtHomeGoals() == null || m.getHtAwayGoals() == null) continue;
-            htTotal++;
-            final boolean isHome = m.getHomeTeamId().equals(homeTeamId);
-            final int scored = isHome ? m.getHtHomeGoals() : m.getHtAwayGoals();
-            final int conceded = isHome ? m.getHtAwayGoals() : m.getHtHomeGoals();
-            if (scored > conceded) htHome++;
-            else if (scored == conceded) htDraw++;
-            else htAway++;
+    private double[][] buildScoreMatrix(final double muHome, final double muAway) {
+        final double[][] matrix = new double[MAX_GOALS + 1][MAX_GOALS + 1];
+        for (int i = 0; i <= MAX_GOALS; i++) {
+            for (int j = 0; j <= MAX_GOALS; j++) {
+                matrix[i][j] = poissonPmf(i, muHome) * poissonPmf(j, muAway);
+            }
         }
-        for (final Match m : awayMatches) {
-            if (m.getHtHomeGoals() == null || m.getHtAwayGoals() == null) continue;
-            htTotal++;
-            final boolean isHome = m.getHomeTeamId().equals(awayTeamId);
-            final int scored = isHome ? m.getHtHomeGoals() : m.getHtAwayGoals();
-            final int conceded = isHome ? m.getHtAwayGoals() : m.getHtHomeGoals();
-            if (scored > conceded) htAway++;
-            else if (scored == conceded) htDraw++;
-            else htHome++;
-        }
+        return matrix;
+    }
 
+    /** Derives 1X2 probabilities by summing the relevant regions of the score matrix. */
+    private Probability1X2 derive1X2(final double[][] matrix) {
+        double homeWin = 0, draw = 0, awayWin = 0;
+        for (int i = 0; i <= MAX_GOALS; i++) {
+            for (int j = 0; j <= MAX_GOALS; j++) {
+                if      (i > j) homeWin += matrix[i][j];
+                else if (i == j) draw   += matrix[i][j];
+                else             awayWin += matrix[i][j];
+            }
+        }
         final Probability1X2 p = new Probability1X2();
-        if (htTotal == 0) {
-            p.setHomeWin(33.33);
-            p.setDraw(33.33);
-            p.setAwayWin(33.34);
-        } else {
-            p.setHomeWin(round((double) htHome / htTotal * 100));
-            p.setDraw(round((double) htDraw / htTotal * 100));
-            p.setAwayWin(round((double) htAway / htTotal * 100));
-        }
+        p.setHomeWin(round(homeWin * 100));
+        p.setDraw(round(draw * 100));
+        p.setAwayWin(round(awayWin * 100));
         return p;
     }
 
+    /** Computes Over/Under 2.5, BTTS, and average total goals from the score matrix. */
+    private void calcGoalMarkets(final RiskAnalysis risk, final double[][] matrix,
+                                  final double muHome, final double muAway) {
+        double over = 0, btts = 0;
+        for (int i = 0; i <= MAX_GOALS; i++) {
+            for (int j = 0; j <= MAX_GOALS; j++) {
+                if (i + j > 2)          over += matrix[i][j];
+                if (i > 0 && j > 0)     btts += matrix[i][j];
+            }
+        }
+        risk.setAvgTotalGoals(round(muHome + muAway));
+        risk.setOverPercentage(round(over * 100));
+        risk.setUnderPercentage(round((1.0 - over) * 100));
+        risk.setBttsYesPercentage(round(btts * 100));
+        risk.setBttsNoPercentage(round((1.0 - btts) * 100));
+    }
+
     /**
-     * Over/Under 2.5 and BTTS from the combined match pool.
+     * Poisson PMF: P(X=k | λ) = e^{-λ} × λ^k / k!.
+     * Computed in log-space for numerical stability.
      */
-    private void calcOverUnderAndBtts(
-            final RiskAnalysis risk,
-            final List<Match> homeMatches,
-            final List<Match> awayMatches) {
-
-        int overCount = 0, bttsCount = 0, totalCount = 0;
-        double totalGoals = 0;
-
-        for (final Match m : homeMatches) {
-            if (m.getHomeGoals() == null || m.getAwayGoals() == null) continue;
-            totalCount++;
-            final int goals = m.getHomeGoals() + m.getAwayGoals();
-            totalGoals += goals;
-            if (goals > OVER_UNDER_THRESHOLD) overCount++;
-            if (m.getHomeGoals() > 0 && m.getAwayGoals() > 0) bttsCount++;
-        }
-        for (final Match m : awayMatches) {
-            if (m.getHomeGoals() == null || m.getAwayGoals() == null) continue;
-            totalCount++;
-            final int goals = m.getHomeGoals() + m.getAwayGoals();
-            totalGoals += goals;
-            if (goals > OVER_UNDER_THRESHOLD) overCount++;
-            if (m.getHomeGoals() > 0 && m.getAwayGoals() > 0) bttsCount++;
-        }
-
-        risk.setAvgTotalGoals(totalCount > 0 ? round(totalGoals / totalCount) : 0.0);
-        risk.setOverPercentage(totalCount > 0 ? round((double) overCount / totalCount * 100) : 50.0);
-        risk.setUnderPercentage(totalCount > 0 ? round(100.0 - (double) overCount / totalCount * 100) : 50.0);
-        risk.setBttsYesPercentage(totalCount > 0 ? round((double) bttsCount / totalCount * 100) : 50.0);
-        risk.setBttsNoPercentage(totalCount > 0 ? round(100.0 - (double) bttsCount / totalCount * 100) : 50.0);
+    private double poissonPmf(final int k, final double lambda) {
+        if (lambda <= 0) return k == 0 ? 1.0 : 0.0;
+        double logP = -lambda + k * Math.log(lambda);
+        for (int n = 2; n <= k; n++) logP -= Math.log(n);
+        return Math.exp(logP);
     }
 
     private double round(final double value) {
