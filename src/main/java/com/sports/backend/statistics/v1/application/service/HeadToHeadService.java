@@ -10,7 +10,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +44,10 @@ public class HeadToHeadService {
 
         int team1Wins = 0, draws = 0, team2Wins = 0;
         int team1Goals = 0, team2Goals = 0, totalGoals = 0, bttsCount = 0;
+        int overCount = 0;
+        int htTeam1Wins = 0, htDraws = 0, htTeam2Wins = 0, htMatchesWithData = 0;
+        int team1CleanSheets = 0, team2CleanSheets = 0;
+        final Map<String, Integer> scoreCounts = new HashMap<>();
 
         for (final Match match : matches) {
             if (match.getHomeGoals() == null || match.getAwayGoals() == null) {
@@ -60,6 +66,27 @@ public class HeadToHeadService {
             else team2Wins++;
 
             if (t1g > 0 && t2g > 0) bttsCount++;
+
+            // Over/Under 2.5
+            if (t1g + t2g > 2) overCount++;  // >2 means at least 3 goals (>2.5)
+
+            // Clean sheets
+            if (t2g == 0) team1CleanSheets++;
+            if (t1g == 0) team2CleanSheets++;
+
+            // Most common exact score (from team1's perspective)
+            final String score = t1g + "-" + t2g;
+            scoreCounts.merge(score, 1, Integer::sum);
+
+            // Half-time result
+            if (match.getHtHomeGoals() != null && match.getHtAwayGoals() != null) {
+                htMatchesWithData++;
+                final int htT1g = team1IsHome ? match.getHtHomeGoals() : match.getHtAwayGoals();
+                final int htT2g = team1IsHome ? match.getHtAwayGoals() : match.getHtHomeGoals();
+                if (htT1g > htT2g) htTeam1Wins++;
+                else if (htT1g == htT2g) htDraws++;
+                else htTeam2Wins++;
+            }
         }
 
         final int total = matches.size();
@@ -71,6 +98,24 @@ public class HeadToHeadService {
         h2h.setAvgTotalGoals(total > 0 ? round((double) totalGoals / total) : 0.0);
         h2h.setBttsCount(bttsCount);
         h2h.setBttsPercentage(total > 0 ? round((double) bttsCount / total * 100) : 0.0);
+
+        h2h.setOverCount(overCount);
+        h2h.setOverPercentage(total > 0 ? round((double) overCount / total * 100) : 0.0);
+        h2h.setUnderPercentage(total > 0 ? round((double) (total - overCount) / total * 100) : 0.0);
+
+        h2h.setHtTeam1Wins(htTeam1Wins);
+        h2h.setHtDraws(htDraws);
+        h2h.setHtTeam2Wins(htTeam2Wins);
+        h2h.setHtMatchesWithData(htMatchesWithData);
+
+        h2h.setTeam1CleanSheets(team1CleanSheets);
+        h2h.setTeam2CleanSheets(team2CleanSheets);
+
+        final Map.Entry<String, Integer> topScore = scoreCounts.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .orElse(null);
+        h2h.setMostCommonScore(topScore != null ? topScore.getKey() : "N/A");
+        h2h.setMostCommonScoreCount(topScore != null ? topScore.getValue() : 0);
 
         return h2h;
     }

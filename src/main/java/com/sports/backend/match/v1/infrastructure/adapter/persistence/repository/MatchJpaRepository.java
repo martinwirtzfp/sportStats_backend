@@ -50,8 +50,6 @@ public interface MatchJpaRepository extends JpaRepository<MatchEntity, Long> {
             """)
     List<MatchEntity> findByBothTeamsAndSeason(@Param("team1Id") Long team1Id, @Param("team2Id") Long team2Id, @Param("season") String season);
 
-    List<MatchEntity> findByCompetitionIdAndSeason(Long competitionId, String season);
-
     @Query("SELECT DISTINCT m.homeTeamId FROM MatchEntity m WHERE m.competitionId = :competitionId AND m.season = :season")
     List<Long> findDistinctHomeTeamIdsByCompetitionAndSeason(@Param("competitionId") Long competitionId, @Param("season") String season);
 

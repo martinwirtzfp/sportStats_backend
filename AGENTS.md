@@ -189,10 +189,11 @@ Tres servicios independientes:
 - Endpoint: `GET /api/risk?homeTeamId=X&awayTeamId=Y&lastN=10`
 
 #### HeadToHeadService — historial entre dos equipos
-- `getHeadToHead(team1Id, team2Id)`: victorias, empates, promedios de goles, BTTS
-- Campos: `team1GoalsAvg`, `team2GoalsAvg`, `avgTotalGoals`, `bttsPercentage` (0-100)
+- `getHeadToHead(team1Id, team2Id, season?)`: victorias, empates, promedios de goles, BTTS, over/under, clean sheets, resultado al descanso, marcador más repetido
+- Campos: `team1GoalsAvg`, `team2GoalsAvg`, `avgTotalGoals`, `bttsCount`, `bttsPercentage` (0-100), `overCount`, `overPercentage`, `underPercentage`, `htTeam1Wins`, `htDraws`, `htTeam2Wins`, `htMatchesWithData`, `team1CleanSheets`, `team2CleanSheets`, `mostCommonScore`, `mostCommonScoreCount`
 - `recentMatches`: lista de `Match` objetos de dominio
-- Endpoint: `GET /api/h2h?team1Id=X&team2Id=Y`
+- Endpoint: `GET /api/h2h?team1Id=X&team2Id=Y[&season=2024]`
+- `over` = totalGoals > 2 (es decir, ≥ 3 goles, equivalente a Over 2.5)
 
 ### user + auth
 - Registro: `POST /api/auth/register` → devuelve `LoginResponseDto` { token, userId, username, email }
@@ -297,6 +298,9 @@ APIFOOTBALL_ERROR        502
 | `UserController` | `extractUserId` sin null check en Authorization header | Añadida validación |
 | `SecurityConfig` | `requestMatchers("/swagger-ui/**")` no cubría `/swagger-ui.html` → 403 al acceder a Swagger | Añadido `/swagger-ui.html` y `/v3/api-docs.yaml` explícitamente |
 | `DataIngestionController` | Requería `competitionId` (Long) que debía existir previamente en BD — imposible con perfil `local-db` vacío | Cambiado a `competitionName` (String); `DataIngestionService` crea la competición automáticamente si no existe |
+| `HeadToHeadService` | Al reescribir el método con nuevas estadísticas (over/under, clean sheets, etc.), `replace_string_in_file` añadió el nuevo código sin borrar el antiguo → clase con dos constructores, dos `getHeadToHead` y dos `round`, error `Unresolved compilation problems` al arrancar | El viejo bloque duplicado fue eliminado manualmente; el archivo quedó con una única implementación completa |
+| `MatchStatisticsEntity`, `MatchStatistics`, `MatchStatisticsJpaRepository`, `MatchPort.saveStatistics`, `MatchRepository.saveStatistics`, `MatchEntityConverter` (métodos stats) | Subsistema `match_statistics` completamente inactivo — tabla siempre vacía, ningún servicio llamaba a `saveStatistics` | Los 3 archivos eliminados, métodos de puerto/repositorio/converter eliminados. Purga total del código muerto |
+| `MatchPort.findByCompetitionIdAndSeason`, `MatchRepository.findByCompetitionIdAndSeason`, `MatchJpaRepository.findByCompetitionIdAndSeason` | Método declarado, implementado y nunca llamado por ningún servicio | Eliminado de los tres niveles de la cadena |
 
 ---
 

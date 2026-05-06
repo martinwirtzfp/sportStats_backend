@@ -1,7 +1,6 @@
 package com.sports.backend.match.v1.application.domain.port;
 
 import com.sports.backend.match.v1.application.domain.model.Match;
-import com.sports.backend.match.v1.application.domain.model.MatchStatistics;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,11 +25,7 @@ public interface MatchPort {
 
     List<Match> findByBothTeamIds(Long team1Id, Long team2Id, String season);
 
-    List<Match> findByCompetitionIdAndSeason(Long competitionId, String season);
-
     List<Long> findDistinctTeamIdsByCompetitionAndSeason(Long competitionId, String season);
 
     Match save(Match match);
-
-    void saveStatistics(MatchStatistics statistics);
 }

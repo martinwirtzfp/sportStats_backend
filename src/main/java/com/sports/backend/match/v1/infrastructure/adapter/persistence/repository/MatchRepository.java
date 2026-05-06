@@ -1,7 +1,6 @@
 package com.sports.backend.match.v1.infrastructure.adapter.persistence.repository;
 
 import com.sports.backend.match.v1.application.domain.model.Match;
-import com.sports.backend.match.v1.application.domain.model.MatchStatistics;
 import com.sports.backend.match.v1.application.domain.port.MatchPort;
 import com.sports.backend.match.v1.infrastructure.adapter.persistence.model.converter.MatchEntityConverter;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +17,6 @@ import java.util.Set;
 public class MatchRepository implements MatchPort {
 
     private final MatchJpaRepository jpaRepository;
-    private final MatchStatisticsJpaRepository statisticsJpaRepository;
     private final MatchEntityConverter converter;
 
     @Override
@@ -67,11 +65,6 @@ public class MatchRepository implements MatchPort {
     }
 
     @Override
-    public List<Match> findByCompetitionIdAndSeason(final Long competitionId, final String season) {
-        return converter.toDomainList(jpaRepository.findByCompetitionIdAndSeason(competitionId, season));
-    }
-
-    @Override
     public List<Long> findDistinctTeamIdsByCompetitionAndSeason(final Long competitionId, final String season) {
         final Set<Long> ids = new HashSet<>();
         ids.addAll(jpaRepository.findDistinctHomeTeamIdsByCompetitionAndSeason(competitionId, season));
@@ -82,10 +75,5 @@ public class MatchRepository implements MatchPort {
     @Override
     public Match save(final Match match) {
         return converter.toDomain(jpaRepository.save(converter.toEntity(match)));
-    }
-
-    @Override
-    public void saveStatistics(final MatchStatistics statistics) {
-        statisticsJpaRepository.save(converter.toEntity(statistics));
     }
 }
