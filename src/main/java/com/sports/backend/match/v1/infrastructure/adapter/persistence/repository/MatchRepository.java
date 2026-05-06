@@ -42,6 +42,21 @@ public class MatchRepository implements MatchPort {
     }
 
     @Override
+    public List<Match> findAllByTeamId(final Long teamId) {
+        return converter.toDomainList(jpaRepository.findAllFinishedByTeamId(teamId));
+    }
+
+    @Override
+    public List<Match> findAllByTeamId(final Long teamId, final String season) {
+        return converter.toDomainList(jpaRepository.findAllFinishedByTeamIdAndSeason(teamId, season));
+    }
+
+    @Override
+    public List<String> findDistinctSeasonsByTeamId(final Long teamId) {
+        return jpaRepository.findDistinctSeasonsByTeamId(teamId);
+    }
+
+    @Override
     public List<Match> findByBothTeamIds(final Long team1Id, final Long team2Id) {
         return converter.toDomainList(jpaRepository.findByBothTeams(team1Id, team2Id));
     }

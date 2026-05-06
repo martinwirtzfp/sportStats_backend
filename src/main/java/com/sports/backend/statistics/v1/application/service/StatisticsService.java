@@ -26,9 +26,16 @@ public class StatisticsService {
         final var team = teamPort.findById(teamId)
                 .orElseThrow(() -> new ApplicationException(ApplicationError.TEAM_NOT_FOUND));
 
-        final List<Match> matches = season != null
-                ? matchPort.findByTeamId(teamId, lastN, season)
-                : matchPort.findByTeamId(teamId, lastN);
+        final List<Match> matches;
+        if (lastN <= 0) {
+            matches = season != null
+                    ? matchPort.findAllByTeamId(teamId, season)
+                    : matchPort.findAllByTeamId(teamId);
+        } else {
+            matches = season != null
+                    ? matchPort.findByTeamId(teamId, lastN, season)
+                    : matchPort.findByTeamId(teamId, lastN);
+        }
 
         final TeamStats stats = new TeamStats();
         stats.setTeamId(teamId);

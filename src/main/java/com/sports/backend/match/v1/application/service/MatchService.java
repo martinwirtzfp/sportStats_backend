@@ -24,8 +24,8 @@ public class MatchService {
     }
 
     public List<Match> findLastMatchesByTeam(final Long teamId, final int lastN) {
-        log.debug("Fetching last {} matches for team id#{}", lastN, teamId);
-        return matchPort.findByTeamId(teamId, lastN);
+        log.debug("Fetching {} matches for team id#{}", lastN <= 0 ? "all" : "last " + lastN, teamId);
+        return lastN <= 0 ? matchPort.findAllByTeamId(teamId) : matchPort.findByTeamId(teamId, lastN);
     }
 
     public List<Match> findHeadToHead(final Long team1Id, final Long team2Id) {

@@ -39,12 +39,15 @@ public class RiskCalculationService {
         final var awayTeam = teamPort.findById(awayTeamId)
                 .orElseThrow(() -> new ApplicationException(ApplicationError.TEAM_NOT_FOUND));
 
-        final List<Match> homeMatches = season != null
-                ? matchPort.findByTeamId(homeTeamId, lastN, season)
-                : matchPort.findByTeamId(homeTeamId, lastN);
-        final List<Match> awayMatches = season != null
-                ? matchPort.findByTeamId(awayTeamId, lastN, season)
-                : matchPort.findByTeamId(awayTeamId, lastN);
+        final List<Match> homeMatches;
+        final List<Match> awayMatches;
+        if (lastN <= 0) {
+            homeMatches = season != null ? matchPort.findAllByTeamId(homeTeamId, season) : matchPort.findAllByTeamId(homeTeamId);
+            awayMatches = season != null ? matchPort.findAllByTeamId(awayTeamId, season) : matchPort.findAllByTeamId(awayTeamId);
+        } else {
+            homeMatches = season != null ? matchPort.findByTeamId(homeTeamId, lastN, season) : matchPort.findByTeamId(homeTeamId, lastN);
+            awayMatches = season != null ? matchPort.findByTeamId(awayTeamId, lastN, season) : matchPort.findByTeamId(awayTeamId, lastN);
+        }
 
         final RiskAnalysis risk = new RiskAnalysis();
         risk.setHomeTeamId(homeTeamId);

@@ -151,12 +151,14 @@ Cada módulo sigue la estructura:
 - Dominio: `Team` { id, name, shortName, logoUrl, apiId, competitionId, **competitionName** }
 - `competitionName` existe en el dominio pero **NO en `TeamEntity`** (se obtiene por join)
 - **MapStruct CRÍTICO**: `@Mapping(target="competitionName", ignore=true)` debe estar en `toDomain(TeamEntity)`, NO en `toEntity(Team)`
-- Endpoints: `GET /api/teams?competitionId=X`, `GET /api/teams/{id}`
+- Endpoints: `GET /api/teams?competitionId=X`, `GET /api/teams/{id}`, `GET /api/teams/{id}/seasons`
+- `GET /api/teams/{id}/seasons` → `List<String>` de temporadas en las que este equipo tiene partidos jugados
 
 ### match
 - Dominio: `Match` { id, homeTeamId, homeTeamName, homeTeamLogo, awayTeamId, awayTeamName, awayTeamLogo, matchDate, status, homeGoals, awayGoals, htHomeGoals, htAwayGoals, competitionId, competitionName, season, apiId }
 - Status values: `FINISHED`, `SCHEDULED`, `LIVE`, etc.
 - Endpoints: `GET /api/matches/{id}`, `GET /api/matches/teams/{teamId}?lastN=10`, `GET /api/matches/h2h?team1Id=X&team2Id=Y`
+- `lastN=0` en `/api/matches/teams/{teamId}` devuelve **todos** los partidos (sin límite)
 - **JPQL Bug histórico corregido**: `findByBothTeams` tenía precedencia incorrecta de `AND/OR`. Forma correcta:
   ```sql
   WHERE ((m.homeTeamId = :team1Id AND m.awayTeamId = :team2Id)
@@ -164,17 +166,22 @@ Cada módulo sigue la estructura:
   AND m.status = 'FINISHED'
   ```
 
+**Nuevos métodos en MatchPort** (añadidos para soportar lastN=0 y seasons por equipo):
+- `findAllByTeamId(Long teamId)` → todos los partidos sin límite
+- `findAllByTeamId(Long teamId, String season)` → todos los partidos de una temporada
+- `findDistinctSeasonsByTeamId(Long teamId)` → temporadas distintas con datos para ese equipo
+
 ### statistics
 Tres servicios independientes:
 
 #### StatisticsService — stats de un equipo
 - `getTeamStats(teamId, lastN)`: calcula W/D/L, goles, promedios, desglose casa/fuera
+- `lastN = 0` significa "todos los partidos disponibles" (sin límite); cualquier valor > 0 limita a los últimos N
 - Percentages en escala 0-100 (ya multiplicados × 100), redondeados a 2 decimales
-- Endpoint: `GET /api/statistics/teams/{teamId}?lastN=10`
+- Endpoint: `GET /api/statistics/teams/{teamId}?lastN=10` (0 = todos)
 
 #### RiskCalculationService — probabilidades de apuestas
-- `calculate(homeTeamId, awayTeamId, lastN)`: modelo de probabilidad con decaimiento exponencial (λ=0.1)
-- Todos los campos de porcentaje están en escala **0-100** (NO 0-1)
+- `calculate(homeTeamId, awayTeamId, lastN)`: modelo de probabilidad con decaimiento exponencial (λ=0.1)- `lastN = 0` significa "todos los partidos disponibles"- Todos los campos de porcentaje están en escala **0-100** (NO 0-1)
   - `probability1X2.homeWin/draw/awayWin`: porcentajes 1X2
   - `overPercentage`, `underPercentage`: más/menos de 2.5 goles
   - `bttsYesPercentage`, `bttsNoPercentage`: ambos equipos marcan

@@ -44,4 +44,10 @@ public class TeamController {
     public ResponseEntity<TeamDto> findById(@PathVariable final Long id) {
         return ResponseEntity.ok(converter.toDto(teamService.findById(id)));
     }
+
+    @Operation(summary = "Get seasons with match data for a specific team")
+    @GetMapping("/{id}/seasons")
+    public ResponseEntity<List<String>> findTeamSeasons(@PathVariable final Long id) {
+        return ResponseEntity.ok(teamService.findTeamSeasons(id));
+    }
 }

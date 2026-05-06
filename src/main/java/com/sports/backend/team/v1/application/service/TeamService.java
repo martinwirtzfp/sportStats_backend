@@ -40,4 +40,11 @@ public class TeamService {
         return teamPort.findById(id)
                 .orElseThrow(() -> new ApplicationException(ApplicationError.TEAM_NOT_FOUND));
     }
+
+    public List<String> findTeamSeasons(final Long teamId) {
+        log.debug("Fetching available seasons for team id#{}", teamId);
+        teamPort.findById(teamId)
+                .orElseThrow(() -> new ApplicationException(ApplicationError.TEAM_NOT_FOUND));
+        return matchPort.findDistinctSeasonsByTeamId(teamId);
+    }
 }

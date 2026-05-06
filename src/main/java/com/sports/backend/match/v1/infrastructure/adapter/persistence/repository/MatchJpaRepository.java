@@ -57,4 +57,29 @@ public interface MatchJpaRepository extends JpaRepository<MatchEntity, Long> {
 
     @Query("SELECT DISTINCT m.awayTeamId FROM MatchEntity m WHERE m.competitionId = :competitionId AND m.season = :season")
     List<Long> findDistinctAwayTeamIdsByCompetitionAndSeason(@Param("competitionId") Long competitionId, @Param("season") String season);
+
+    @Query("""
+            SELECT DISTINCT m.season FROM MatchEntity m
+            WHERE (m.homeTeamId = :teamId OR m.awayTeamId = :teamId)
+            AND m.status = 'FINISHED'
+            ORDER BY m.season DESC
+            """)
+    List<String> findDistinctSeasonsByTeamId(@Param("teamId") Long teamId);
+
+    @Query("""
+            SELECT m FROM MatchEntity m
+            WHERE (m.homeTeamId = :teamId OR m.awayTeamId = :teamId)
+            AND m.status = 'FINISHED'
+            ORDER BY m.matchDate DESC
+            """)
+    List<MatchEntity> findAllFinishedByTeamId(@Param("teamId") Long teamId);
+
+    @Query("""
+            SELECT m FROM MatchEntity m
+            WHERE (m.homeTeamId = :teamId OR m.awayTeamId = :teamId)
+            AND m.status = 'FINISHED'
+            AND m.season = :season
+            ORDER BY m.matchDate DESC
+            """)
+    List<MatchEntity> findAllFinishedByTeamIdAndSeason(@Param("teamId") Long teamId, @Param("season") String season);
 }
