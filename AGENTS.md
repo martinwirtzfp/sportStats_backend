@@ -57,9 +57,9 @@ Remove-Item -Recurse -Force target
 
 | Perfil | Descripción |
 |--------|-------------|
-| `dev` (default) | H2 en memoria, `create-drop`, sin fixture loader |
+| `dev` | H2 en fichero (`~/sportstatsdb`), `update`, datos persistentes entre reinicios. Útil para desarrollo con ingesta real. |
 | `json` | H2 en memoria + `JsonDataLoaderRunner` carga datos de `src/main/resources/fixtures/` |
-| `local-db` | H2 en fichero (`~/sportstatsdb.mv.db`), `update`, datos persistentes entre reinicios. Usar con ingesta real. Arrancar con `./mvnw spring-boot:run "-Dspring-boot.run.profiles=local-db"` |
+| `prod` | MySQL remoto, `update`. Requiere credenciales de BD en `application-prod.properties`. |
 
 ### Datos cargados en perfil `json`
 
@@ -76,7 +76,7 @@ Ficheros de datos: `src/main/resources/fixtures/laliga_teams.json`, `laliga_fixt
 ### `application.properties` (base)
 ```properties
 server.port=8090
-spring.profiles.active=dev
+spring.profiles.active=prod
 spring.config.import=optional:file:./application-local.properties
 
 app.jwt.secret=${JWT_SECRET:sportstats-super-secret-key-change-this-in-production-min-256-bits}
@@ -98,8 +98,8 @@ El fichero `application-local.properties` está en `.gitignore`. **Nunca committ
 URL del dashboard: https://dashboard.api-football.com/
 
 ### H2 Console
-- Perfiles `dev`/`json`: URL `http://localhost:8090/h2-console`, JDBC URL `jdbc:h2:mem:sportstatsdb`
-- Perfil `local-db`: URL `http://localhost:8090/h2-console`, JDBC URL `jdbc:h2:file:~/sportstatsdb`
+- Perfil `json`: URL `http://localhost:8090/h2-console`, JDBC URL `jdbc:h2:mem:sportstatsdb`
+- Perfil `dev`: URL `http://localhost:8090/h2-console`, JDBC URL `jdbc:h2:file:~/sportstatsdb`
 - Usuario: `sa` / Contraseña: (vacía)
 
 ### Swagger UI
@@ -329,4 +329,4 @@ En desarrollo, el frontend en `:5173` usa el proxy Vite (no hay peticiones cross
 - **Perfil json vs dev**: el perfil `json` carga datos sin necesidad de MySQL; útil para demos y desarrollo offline
 - **H2 sin dialect explícito**: desde Hibernate 6, la dialect se auto-detecta. No especificar `spring.jpa.database-platform` para evitar warnings de deprecación
 - **`spring.jpa.hibernate.ddl-auto=create-drop`** en perfiles de dev/json: la base de datos se crea de cero en cada arranque, garantizando un estado limpio
-- **Algoritmo de riesgo con decaimiento exponencial**: los partidos más recientes tienen más peso (λ=0.1). No es un modelo estadístico de producción, es suficiente para TFG
+- **Algoritmo de riesgo con decaimiento exponencial**: los partidos más recientes tienen más peso. Constante de decaimiento κ=0.003 (semivida ≈231 días), factor ventaja local HOME_ADVANTAGE=1.15. No es un modelo estadístico de producción, es suficiente para TFG
